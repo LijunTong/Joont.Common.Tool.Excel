@@ -7,6 +7,7 @@
     <Authors>Joont</Authors>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/LijunTong/Jt.Common.Tool.Excel.git</RepositoryUrl>
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
