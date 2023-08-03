@@ -11,27 +11,24 @@ using System.Linq;
 
 namespace Jt.Common.Tool.Excel
 {
-    public class ExcelHelper
+    public class ExcelHelper : IDisposable
     {
         public ExcelPackage ExcelPackage { get; private set; }
         private Stream fs;
 
         public ExcelHelper()
         {
+            ExcelPackage = new ExcelPackage();
         }
 
-        public void OpenOrCreate(string filePath)
+        private bool CheckOpenFile()
         {
-            if (File.Exists(filePath))
+            if (ExcelPackage == null)
             {
-                var file = new FileInfo(filePath);
-                ExcelPackage = new ExcelPackage(file);
+                throw new Exception("Excel未打开");
             }
-            else
-            {
-                fs = File.Create(filePath);
-                ExcelPackage = new ExcelPackage(fs);
-            }
+
+            return true;
         }
 
         /// <summary>
@@ -41,12 +38,13 @@ namespace Jt.Common.Tool.Excel
         /// <returns></returns>
         public ExcelWorksheet GetOrAddSheet(string sheetName)
         {
-            ExcelWorksheet ws = ExcelPackage.Workbook.Worksheets.FirstOrDefault(i => i.Name == sheetName);
-            if (ws == null)
+            CheckOpenFile();
+            ExcelWorksheet sheet = ExcelPackage.Workbook.Worksheets.FirstOrDefault(i => i.Name == sheetName);
+            if (sheet == null)
             {
-                ws = ExcelPackage.Workbook.Worksheets.Add(sheetName);
+                sheet = ExcelPackage.Workbook.Worksheets.Add(sheetName);
             }
-            return ws;
+            return sheet;
         }
 
         /// <summary>
@@ -56,7 +54,8 @@ namespace Jt.Common.Tool.Excel
         /// <param name="sheetName"></param>
         public void DeleteSheet(string sheetName)
         {
-            var sheet = ExcelPackage.Workbook.Worksheets.FirstOrDefault(i => i.Name == sheetName);
+            CheckOpenFile();
+            ExcelWorksheet sheet = ExcelPackage.Workbook.Worksheets.FirstOrDefault(i => i.Name == sheetName);
             if (sheet != null)
             {
                 ExcelPackage.Workbook.Worksheets.Delete(sheet);
@@ -64,16 +63,17 @@ namespace Jt.Common.Tool.Excel
         }
 
         /// <summary>
-        /// 导出列表到excel
+        /// 填充数据
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="list">数据源</param>
         /// <param name="sheetName">sheet名称</param>
         /// <param name="isDeleteSameNameSheet">是否删除已存在的同名sheet，false时将重命名导出的sheet</param>
-        public void AppendSheetToWorkBook<T>(IEnumerable<T> list, string sheetName, bool isDeleteSameNameSheet = true)
+        public Stream FillData<T>(IEnumerable<T> list, string sheetName, bool isDeleteSameNameSheet = true)
         {
-            ExcelWorksheet ws = AddSheet(sheetName, isDeleteSameNameSheet);
-            ws.Cells["A1"].LoadFromCollection(list, true);
+            ExcelWorksheet sheet = AddSheet(sheetName, isDeleteSameNameSheet);
+            sheet.Cells["A1"].LoadFromCollection(list, true);
+            return ExcelPackage.Stream;
         }
 
         /// <summary>
@@ -99,7 +99,17 @@ namespace Jt.Common.Tool.Excel
         /// </summary>
         public void Save()
         {
+            CheckOpenFile();
             ExcelPackage.Save();
+        }
+
+        /// <summary>
+        /// 保存修改
+        /// </summary>
+        public void SaveAs(string filePath)
+        {
+            CheckOpenFile();
+            ExcelPackage.SaveAs(filePath);
         }
 
         /// <summary>
@@ -117,14 +127,15 @@ namespace Jt.Common.Tool.Excel
             }
             else
             {
-                while (ExcelPackage.Workbook.Worksheets.Any(i => i.Name == sheetName))
+                CheckOpenFile();
+                if (ExcelPackage.Workbook.Worksheets.Any(i => i.Name == sheetName))
                 {
-                    sheetName = sheetName + "(1)";
+                    sheetName += "(1)";
                 }
             }
 
-            ExcelWorksheet ws = ExcelPackage.Workbook.Worksheets.Add(sheetName);
-            return ws;
+            ExcelWorksheet sheet = ExcelPackage.Workbook.Worksheets.Add(sheetName);
+            return sheet;
         }
 
         public void Dispose()
