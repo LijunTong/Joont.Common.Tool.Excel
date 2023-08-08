@@ -1,13 +1,9 @@
-﻿using OfficeOpenXml.Style;
-using OfficeOpenXml;
+﻿using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing.Drawing2D;
-using System.Drawing;
 using System.IO;
 using System.Linq;
+using LicenseContext = OfficeOpenXml.LicenseContext;
 
 namespace Jt.Common.Tool.Excel
 {
@@ -18,6 +14,7 @@ namespace Jt.Common.Tool.Excel
 
         public ExcelHelper()
         {
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             ExcelPackage = new ExcelPackage();
         }
 
@@ -82,7 +79,7 @@ namespace Jt.Common.Tool.Excel
         /// <param name="sheet"></param>
         /// <param name="values">行类容，一个单元格一个对象</param>
         /// <param name="rowIndex">插入位置，起始位置为1</param>
-        public void InsertValues(string sheetName, List<object> values, int rowIndex)
+        public void InsertValues<T>(string sheetName, List<T> values, int rowIndex)
         {
             var sheet = GetOrAddSheet(sheetName);
             sheet.InsertRow(rowIndex, 1);
