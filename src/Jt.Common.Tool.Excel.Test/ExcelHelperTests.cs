@@ -15,7 +15,7 @@
         {
             _excelHelper.GetOrAddSheet("test");
             _excelHelper.SaveAs(@"E:\test\a.xlsx");
-            Assert.Pass();
+            Assert.Pass("ok");
         }
 
         [Test()]
@@ -23,22 +23,34 @@
         {
             _excelHelper.DeleteSheet("test");
             _excelHelper.SaveAs(@"E:\test\a.xlsx");
-            Assert.Pass();
+            Assert.Pass("ok");
         }
 
         [Test()]
         public void FillDataTest()
         {
             var data = Enumerable.Range(1, 10).Select(x => new User { Name = x.ToString(), Password = x.ToString() });
-            _excelHelper.FillData(data, "test");
+            _excelHelper.Export("test", data);
             _excelHelper.SaveAs(@"E:\test\a.xlsx");
-            Assert.Pass();
+            Assert.Pass("ok");
         }
 
         [Test()]
         public void InsertValuesTest()
         {
-            Assert.Pass();
+            var data = Enumerable.Range(1, 10).Select(x => new User { Name = x.ToString(), Password = x.ToString() });
+            _excelHelper.OpenExcel(@"E:\test\a.xlsx");
+            _excelHelper.Insert("test", data, 5);
+            _excelHelper.Save();
+            Assert.Pass("ok");
+        }
+
+        [Test()]
+        public void ReadTest()
+        {
+            _excelHelper.OpenExcel(@"E:\test\a.xlsx");
+            var data = _excelHelper.Read<User>(6);
+            Assert.Pass("ok");
         }
     }
 }
