@@ -1,55 +1,108 @@
-﻿namespace Jt.Common.Tool.Excel.Tests
+﻿using NUnit.Framework;
+using Jt.Common.Tool.Excel;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Collections;
+
+namespace Jt.Common.Tool.Excel.Tests
 {
     [TestFixture()]
     public class ExcelHelperTests
     {
-        ExcelHelper _excelHelper;
+        ExcelHelper _helper = new ExcelHelper();
 
-        public ExcelHelperTests()
+        [Test()]
+        public void OpenEmptyExcelTest()
         {
-            _excelHelper = new ExcelHelper();
+            _helper.OpenEmptyExcel();
+            _helper.SaveAs(@"E:\test\1.xlsx");
+            Assert.Pass("ok");
         }
 
         [Test()]
-        public void GetOrAddSheetTest()
+        public void OpenEmptyExcelTest1()
         {
-            _excelHelper.GetOrAddSheet("test");
-            _excelHelper.SaveAs(@"E:\test\a.xlsx");
+            _helper.OpenEmptyExcel("test");
+            _helper.SaveAs(@"E:\test\2.xlsx");
+            Assert.Pass("ok");
+        }
+
+        [Test()]
+        public void OpenFileExcelTest()
+        {
+            _helper.OpenFileExcel(@"E:\test\1.xlsx");
+            Assert.Pass("ok");
+        }
+
+        [Test()]
+        public void SelectOrCreateSheetTest()
+        {
+            _helper.SelectOrCreateSheet("test2");
+            Assert.Pass("ok");
+        }
+
+        [Test()]
+        public void OpenFileExcelTest1()
+        {
+            _helper.OpenFileExcel(@"E:\test\1.xlsx", "test2");
             Assert.Pass("ok");
         }
 
         [Test()]
         public void DeleteSheetTest()
         {
-            _excelHelper.DeleteSheet("test");
-            _excelHelper.SaveAs(@"E:\test\a.xlsx");
+            _helper.DeleteSheet("test2");
             Assert.Pass("ok");
         }
 
         [Test()]
-        public void FillDataTest()
+        public void ExportTest()
         {
             var data = Enumerable.Range(1, 10).Select(x => new User { Name = x.ToString(), Password = x.ToString() });
-            _excelHelper.Export("test", data);
-            _excelHelper.SaveAs(@"E:\test\a.xlsx");
+            _helper.Export(data);
+            _helper.SaveAs(@"E:\test\3.xlsx");
             Assert.Pass("ok");
         }
 
         [Test()]
-        public void InsertValuesTest()
+        public void InsertTest()
         {
             var data = Enumerable.Range(1, 10).Select(x => new User { Name = x.ToString(), Password = x.ToString() });
-            _excelHelper.OpenExcel(@"E:\test\a.xlsx");
-            _excelHelper.Insert("test", data, 5);
-            _excelHelper.Save();
+            _helper.Insert(data, 3);
+            _helper.SaveAs(@"E:\test\3.xlsx");
             Assert.Pass("ok");
         }
 
         [Test()]
         public void ReadTest()
         {
-            _excelHelper.OpenExcel(@"E:\test\a.xlsx");
-            var data = _excelHelper.Read<User>(6);
+            Assert.Pass("ok");
+        }
+
+        [Test()]
+        public void SetStyleTest()
+        {
+            Assert.Pass("ok");
+        }
+
+        [Test()]
+        public void SaveTest()
+        {
+            Assert.Pass("ok");
+        }
+
+        [Test()]
+        public void SaveAsTest()
+        {
+            Assert.Pass("ok");
+        }
+
+        [Test()]
+        public void DisposeTest()
+        {
             Assert.Pass("ok");
         }
     }

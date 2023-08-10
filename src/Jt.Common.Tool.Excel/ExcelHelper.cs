@@ -1,5 +1,6 @@
 ﻿using OfficeOpenXml;
 using OfficeOpenXml.Attributes;
+using OfficeOpenXml.Style;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,48 +11,97 @@ namespace Jt.Common.Tool.Excel
 {
     public class ExcelHelper : IDisposable
     {
-        public ExcelPackage ExcelPackage { get; private set; }
+        private ExcelPackage _excelPackage;
+
+        private ExcelWorksheet _excelWorksheet;
+
+        public int RowCount
+        {
+            get
+            {
+                return _excelWorksheet.Dimension.End.Row;
+            }
+        }
+
+        public int ColCount
+        {
+            get
+            {
+                return _excelWorksheet.Dimension.End.Column;
+            }
+        }
 
         public ExcelHelper()
         {
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            ExcelPackage = new ExcelPackage();
-        }
-
-        public ExcelHelper(string filePath)
-        {
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            ExcelPackage = new ExcelPackage(new FileInfo(filePath));
         }
 
         /// <summary>
-        /// 打开Excel文件
+        /// 打开一个空白Excel文件，创建一个sheet并选中
+        /// </summary>
+        public void OpenEmptyExcel()
+        {
+            OpenEmptyExcel("sheet");
+        }
+
+        /// <summary>
+        /// 打开一个空白Excel文件，创建一个sheet并选中
+        /// <param name="sheetName">sheet名称</param>
+        /// </summary>
+        public void OpenEmptyExcel(string sheetName)
+        {
+            if (_excelPackage != null)
+            {
+                _excelPackage.Dispose();
+            }
+
+            _excelPackage = new ExcelPackage();
+            SelectOrCreateSheet(sheetName);
+        }
+
+        /// <summary>
+        /// 打开Excel文件，默认选中第一个sheet
         /// </summary>
         /// <param name="filePath">文件路径</param>
-        public void OpenExcel(string filePath)
+        public void OpenFileExcel(string filePath)
         {
-            if (ExcelPackage != null)
+            if (_excelPackage != null)
             {
-                ExcelPackage.Dispose();
+                _excelPackage.Dispose();
             }
 
-            ExcelPackage = new ExcelPackage(new FileInfo(filePath));
+            _excelPackage = new ExcelPackage(new FileInfo(filePath));
+            _excelWorksheet = _excelPackage.Workbook.Worksheets.FirstOrDefault();
         }
 
         /// <summary>
-        /// 获取sheet，没有则创建
+        /// 打开Excel文件，默认选中第一个sheet
         /// </summary>
-        /// <param name="sheetName"></param>
-        /// <returns></returns>
-        public ExcelWorksheet GetOrAddSheet(string sheetName)
+        /// <param name="filePath">文件路径</param>
+        /// <param name="sheetName">sheet名称</param>
+        public void OpenFileExcel(string filePath, string sheetName)
+        {
+            if (_excelPackage != null)
+            {
+                _excelPackage.Dispose();
+            }
+
+            _excelPackage = new ExcelPackage(new FileInfo(filePath));
+            SelectOrCreateSheet(sheetName);
+        }
+
+        /// <summary>
+        /// 选择sheet，如果不存在则创建
+        /// </summary>
+        /// <param name="sheetName">sheet名称</param>
+        public void SelectOrCreateSheet(string sheetName)
         {
             CheckOpenFile();
-            ExcelWorksheet sheet = ExcelPackage.Workbook.Worksheets.FirstOrDefault(i => i.Name == sheetName);
-            if (sheet == null)
+            _excelWorksheet = _excelPackage.Workbook.Worksheets.FirstOrDefault(i => i.Name == sheetName);
+            if (_excelWorksheet == null)
             {
-                sheet = ExcelPackage.Workbook.Worksheets.Add(sheetName);
+                _excelWorksheet = _excelPackage.Workbook.Worksheets.Add(sheetName);
             }
-            return sheet;
         }
 
         /// <summary>
@@ -62,10 +112,15 @@ namespace Jt.Common.Tool.Excel
         public void DeleteSheet(string sheetName)
         {
             CheckOpenFile();
-            ExcelWorksheet sheet = ExcelPackage.Workbook.Worksheets.FirstOrDefault(i => i.Name == sheetName);
+            ExcelWorksheet sheet = _excelPackage.Workbook.Worksheets.FirstOrDefault(i => i.Name == sheetName);
             if (sheet != null)
             {
-                ExcelPackage.Workbook.Worksheets.Delete(sheet);
+                _excelPackage.Workbook.Worksheets.Delete(sheet);
+            }
+
+            if (_excelWorksheet.Name == sheetName)
+            {
+                _excelWorksheet = _excelPackage.Workbook.Worksheets.FirstOrDefault();
             }
         }
 
@@ -73,23 +128,19 @@ namespace Jt.Common.Tool.Excel
         /// 导出Excel
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="sheetName">sheet名称</param>
         /// <param name="list">数据</param>
-        /// <param name="isDeleteSameNameSheet">是否删除已存在的同名sheet，false时将重命名导出的sheet</param>
-        public Stream Export<T>(string sheetName, IEnumerable<T> list, bool isDeleteSameNameSheet = true)
+        public Stream Export<T>(IEnumerable<T> list)
         {
-            ExcelWorksheet sheet = AddSheet(sheetName, isDeleteSameNameSheet);
-            sheet.Cells["A1"].LoadFromCollection(list, true);
-            return ExcelPackage.Stream;
+            _excelWorksheet.Cells["A1"].LoadFromCollection(list, true);
+            return _excelPackage.Stream;
         }
 
         /// <summary>
         /// 插入行
         /// </summary>
-        /// <param name="sheetName">sheet名称</param>
         /// <param name="values">数据</param>
         /// <param name="rowIndex">插入位置，起始位置为1</param>
-        public void Insert<T>(string sheetName, IEnumerable<T> values, int rowIndex)
+        public Stream Insert<T>(IEnumerable<T> values, int rowIndex)
         {
             if (values == null)
             {
@@ -98,14 +149,12 @@ namespace Jt.Common.Tool.Excel
 
             if (values.Count() == 0)
             {
-                return;
+                return null;
             }
 
-            var sheet = GetOrAddSheet(sheetName);
-            sheet.InsertRow(rowIndex, values.Count());
-
-            // 指定某个单元格
-            sheet.Cells[rowIndex, 1].LoadFromCollection(values, true);
+            _excelWorksheet.InsertRow(rowIndex, values.Count());
+            _excelWorksheet.Cells[rowIndex, 1].LoadFromCollection(values, true);
+            return _excelPackage.Stream;
         }
 
         /// <summary>
@@ -117,10 +166,7 @@ namespace Jt.Common.Tool.Excel
         public List<T> Read<T>(int startIndex = 1)
         {
             CheckOpenFile();
-            var sheet = ExcelPackage.Workbook.Worksheets.FirstOrDefault();
-            int colCount = sheet.Dimension.End.Column;
-            int rowCount = sheet.Dimension.End.Row;
-            if (startIndex > rowCount)
+            if (startIndex > RowCount)
             {
                 throw new Exception("起始位置超出范围");
             }
@@ -128,7 +174,7 @@ namespace Jt.Common.Tool.Excel
             Type type = typeof(T);
             var properties = type.GetProperties();
             List<T> result = new List<T>();
-            for (int i = startIndex; i <= rowCount; i++)
+            for (int i = startIndex; i <= RowCount; i++)
             {
                 var row = (T)Activator.CreateInstance(type);
                 foreach (var item in properties)
@@ -137,9 +183,9 @@ namespace Jt.Common.Tool.Excel
                     if (attr != null)
                     {
                         var order = attr.Order; // 以order作为列的索引
-                        if (order <= colCount)
+                        if (order <= ColCount)
                         {
-                            string value = sheet.Cells[i, order].Value.ToString();
+                            string value = _excelWorksheet.Cells[i, order].Value.ToString();
                             item.SetValue(row, Convert.ChangeType(value, item.PropertyType));
                         }
                     }
@@ -152,12 +198,47 @@ namespace Jt.Common.Tool.Excel
         }
 
         /// <summary>
+        /// 设置单元格格式
+        /// </summary>
+        /// <param name="startRow">起始行</param>
+        /// <param name="startCol">起始列</param>
+        /// <param name="endRow">结束行</param>
+        /// <param name="endCol">结束列</param>
+        /// <param name="fontName">字体名称</param>
+        /// <param name="fontSize">字体大小</param>
+        /// <param name="horizontalAlignment">水平对齐方式</param>
+        /// <param name="verticalAlignment">垂直对齐方式</param>
+        /// <param name="wrapText">自动换行</param>
+        public void SetStyle(int startRow,
+            int startCol,
+            int endRow,
+            int endCol, 
+            string fontName = "宋体", 
+            float fontSize = 13f,
+            ExcelHorizontalAlignment horizontalAlignment = ExcelHorizontalAlignment.Center, 
+            ExcelVerticalAlignment verticalAlignment = ExcelVerticalAlignment.Center,
+            bool wrapText = false
+            )
+        {
+            startRow = startRow < 1 ? 1 : startRow;
+            startCol = startCol < 1 ? 1 : startCol;
+            endRow = endRow > RowCount ? RowCount : endRow;
+            endCol = endCol < ColCount ? ColCount : endCol;
+            var style = _excelWorksheet.Cells[startRow, startCol, endRow, endCol].Style;
+            style.Font.Name = fontName;
+            style.Font.Size = fontSize;
+            style.HorizontalAlignment = horizontalAlignment;
+            style.VerticalAlignment = verticalAlignment;
+            style.WrapText = wrapText;
+        }
+
+        /// <summary>
         /// 保存修改
         /// </summary>
         public void Save()
         {
             CheckOpenFile();
-            ExcelPackage.Save();
+            _excelPackage.Save();
         }
 
         /// <summary>
@@ -166,33 +247,7 @@ namespace Jt.Common.Tool.Excel
         public void SaveAs(string filePath)
         {
             CheckOpenFile();
-            ExcelPackage.SaveAs(filePath);
-        }
-
-        /// <summary>
-        /// 添加Sheet到ExcelPackage
-        /// </summary>
-        /// <param name="ExcelPackage">ExcelPackage</param>
-        /// <param name="sheetName">sheet名称</param>
-        /// <param name="isDeleteSameNameSheet">如果存在同名的sheet是否删除</param>
-        /// <returns></returns>
-        private ExcelWorksheet AddSheet(string sheetName, bool isDeleteSameNameSheet)
-        {
-            if (isDeleteSameNameSheet)
-            {
-                DeleteSheet(sheetName);
-            }
-            else
-            {
-                CheckOpenFile();
-                if (ExcelPackage.Workbook.Worksheets.Any(i => i.Name == sheetName))
-                {
-                    sheetName += "(1)";
-                }
-            }
-
-            ExcelWorksheet sheet = ExcelPackage.Workbook.Worksheets.Add(sheetName);
-            return sheet;
+            _excelPackage.SaveAs(filePath);
         }
 
         /// <summary>
@@ -202,9 +257,14 @@ namespace Jt.Common.Tool.Excel
         /// <exception cref="Exception"></exception>
         private bool CheckOpenFile()
         {
-            if (ExcelPackage == null)
+            if (_excelPackage == null)
             {
                 throw new Exception("Excel未打开");
+            }
+
+            if (_excelWorksheet == null)
+            {
+                throw new Exception("sheet未选中");
             }
 
             return true;
@@ -212,7 +272,8 @@ namespace Jt.Common.Tool.Excel
 
         public void Dispose()
         {
-            ExcelPackage.Dispose();
+            _excelWorksheet.Dispose();
+            _excelPackage.Dispose();
         }
     }
 }
