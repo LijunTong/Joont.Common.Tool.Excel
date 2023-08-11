@@ -96,7 +96,11 @@ namespace Jt.Common.Tool.Excel
         /// <param name="sheetName">sheet名称</param>
         public void SelectOrCreateSheet(string sheetName)
         {
-            CheckOpenFile();
+            if (_excelPackage == null)
+            {
+                throw new Exception("Excel未打开");
+            }
+
             _excelWorksheet = _excelPackage.Workbook.Worksheets.FirstOrDefault(i => i.Name == sheetName);
             if (_excelWorksheet == null)
             {
@@ -131,6 +135,7 @@ namespace Jt.Common.Tool.Excel
         /// <param name="list">数据</param>
         public Stream Export<T>(IEnumerable<T> list)
         {
+            CheckOpenFile();
             _excelWorksheet.Cells["A1"].LoadFromCollection(list, true);
             return _excelPackage.Stream;
         }
@@ -142,6 +147,7 @@ namespace Jt.Common.Tool.Excel
         /// <param name="rowIndex">插入位置，起始位置为1</param>
         public Stream Insert<T>(IEnumerable<T> values, int rowIndex)
         {
+            CheckOpenFile();
             if (values == null)
             {
                 throw new ArgumentNullException(nameof(values));
