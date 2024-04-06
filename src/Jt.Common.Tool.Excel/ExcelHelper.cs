@@ -191,7 +191,7 @@ namespace Jt.Common.Tool.Excel
                         var order = attr.Order; // 以order作为列的索引
                         if (order <= ColCount)
                         {
-                            string value = _excelWorksheet.Cells[i, order].Value.ToString();
+                            string value = _excelWorksheet.Cells[i, order].Value?.ToString();
                             item.SetValue(row, Convert.ChangeType(value, item.PropertyType));
                         }
                     }
